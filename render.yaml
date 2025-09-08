@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: messenger
+    env: python
+    plan: free
+    region: frankfurt
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn -k gevent -w 1 server:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
