@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Звонок</title>
+<style>
+  body{margin:0;font-family:Arial, sans-serif;background:#111;color:#fff;display:flex;flex-direction:column;height:100vh;align-items:center;justify-content:center}
+  video{width:45%;max-width:480px;border-radius:8px;background:#000}
+  #controls{position:fixed;bottom:20px;display:flex;gap:12px}
+  button{padding:10px 14px;border-radius:8px;border:none;background:#4cafef;color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+  <h2 id="title">Звонок</h2>
+  <div style="display:flex;gap:12px;align-items:center">
+    <video id="local" autoplay muted playsinline></video>
+    <video id="remote" autoplay playsinline></video>
+  </div>
+  <div id="controls">
+    <button id="btn-hang">Завершить</button>
+  </div>
+
+<script src="/static/call.js"></script>
+</body>
+</html>

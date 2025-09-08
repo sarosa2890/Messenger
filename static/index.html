@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Мой мессенджер</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body data-theme="dark">
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="left">
+      <header class="brand">
+        <div class="title">Мой мессенджер</div>
+        <div class="muted">Все сообщения защищены от 3 лиц</div>
+      </header>
+
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="Поиск (чаты, пользователи)">
+        <div id="search-results" class="search-results"></div>
+      </div>
+
+      <div id="chats" class="chats"></div>
+
+      <footer class="left-footer">
+        <button id="settings-btn" class="btn small">⚙️ Параметры</button>
+        <button id="theme-btn" class="btn small">Тема</button>
+        <button id="add-chat" class="btn small">+</button>
+        <button id="logout" class="btn small danger">Выйти</button>
+      </footer>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="chat-header">
+        <div class="peer">
+          <img id="peer-avatar" class="avatar" src="" alt="" />
+          <div class="peer-col">
+            <div id="peer-name" class="peer-name"></div>
+            <div id="peer-status" class="peer-status muted"></div>
+          </div>
+        </div>
+        <div class="chat-actions">
+          <button id="call-voice" class="icon-btn" title="Звонок">📞</button>
+          <button id="call-video" class="icon-btn" title="Видеозвонок">🎥</button>
+        </div>
+      </div>
+
+      <div id="messages" class="messages gradient-bg"></div>
+
+      <div class="composer">
+        <button id="gif-open" class="chip">GIF</button>
+        <input id="msg" type="text" placeholder="Введите сообщение..." />
+        <button id="emoji" class="icon-btn" title="Эмодзи">😊</button>
+        <button id="send" class="send-btn" title="Отправить">✈️</button>
+      </div>
+    </main>
+
+    <!-- GIF panel -->
+    <aside id="gif-panel" class="gif-panel hidden">
+      <div class="gif-bar">
+        <input id="gif-q" type="text" placeholder="Найти GIF">
+        <button id="gif-search" class="btn small">Найти</button>
+        <button id="gif-close" class="btn small">Закрыть</button>
+      </div>
+      <div id="gif-grid" class="gif-grid"></div>
+    </aside>
+  </div>
+
+  <!-- Video Call Modal -->
+  <div id="call-modal" class="call-modal">
+    <div class="call-header">
+      <div class="call-info">
+        <img id="call-peer-avatar" class="call-avatar" src="" alt="">
+        <div>
+          <div id="call-peer-name" class="call-name"></div>
+          <div id="call-status" class="call-status">Соединение...</div>
+        </div>
+      </div>
+      <div id="call-duration" class="call-duration">00:00</div>
+    </div>
+    
+    <div class="video-container">
+      <video id="remote-video" class="remote-video" autoplay playsinline></video>
+      <video id="local-video" class="local-video" autoplay muted playsinline></video>
+      <div id="screen-share-indicator" class="screen-share-indicator">Демонстрация экрана</div>
+    </div>
+
+    <div class="call-controls">
+      <button id="mute-btn" class="call-btn mute" title="Выключить микрофон">🎤</button>
+      <button id="video-btn" class="call-btn video" title="Выключить камеру">📹</button>
+      <button id="screen-btn" class="call-btn screen" title="Демонстрация экрана">🖥️</button>
+      <button id="end-call-btn" class="call-btn end" title="Завершить звонок">📞</button>
+    </div>
+  </div>
+
+  <!-- Incoming call popup -->
+  <div id="incoming-call" class="incoming-call">
+    <div class="incoming-info">
+      <img id="incoming-avatar" class="incoming-avatar" src="" alt="">
+      <div>
+        <div id="incoming-name" class="incoming-name"></div>
+        <div id="incoming-type" class="incoming-type">Входящий звонок</div>
+      </div>
+    </div>
+    <div class="incoming-controls">
+      <button id="accept-call" class="accept-btn">Принять</button>
+      <button id="decline-call" class="decline-btn">Отклонить</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="settings-modal">
+    <div class="settings-content">
+      <div class="settings-header">
+        <h2 class="settings-title">Параметры</h2>
+        <button id="close-settings" class="close-btn">×</button>
+      </div>
+
+      <!-- Profile Section -->
+      <div class="profile-section">
+        <img class="profile-avatar" id="settings-avatar" src="" alt="Ваш аватар" title="Нажмите для изменения аватара">
+        <div class="profile-info">
+          <h3 id="settings-username">Загрузка...</h3>
+          <p id="settings-user-handle">@загрузка...</p>
+          <input type="file" id="avatar-input" class="avatar-input" accept="image/*">
+          <button class="change-avatar-btn" id="change-avatar-btn">Изменить аватар</button>
+        </div>
+      </div>
+
+      <!-- Settings Groups -->
+      <div class="setting-group">
+        <label class="setting-label">Отображаемое имя</label>
+        <div class="setting-desc">Имя, которое видят другие пользователи</div>
+        <input type="text" class="setting-input" id="display-name" placeholder="Ваше имя">
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Статус</label>
+        <div class="setting-desc">Статус, который видят другие пользователи</div>
+        <input type="text" class="setting-input" value="Доступен для общения" id="user-status">
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Язык интерфейса</label>
+        <div class="setting-desc">Выберите язык для интерфейса приложения</div>
+        <select class="setting-select" id="language">
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <div class="toggle-wrapper">
+          <div>
+            <div class="setting-label">Уведомления</div>
+            <div class="setting-desc">Получать уведомления о новых сообщениях</div>
+          </div>
+          <div class="toggle active" id="notifications-toggle"></div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="toggle-wrapper">
+          <div>
+            <div class="setting-label">Звуки уведомлений</div>
+            <div class="setting-desc">Воспроизводить звук при получении сообщений</div>
+          </div>
+          <div class="toggle active" id="sounds-toggle"></div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="toggle-wrapper">
+          <div>
+            <div class="setting-label">Автозагрузка медиа</div>
+            <div class="setting-desc">Автоматически загружать изображения и GIF</div>
+          </div>
+          <div class="toggle" id="auto-media-toggle"></div>
+        </div>
+      </div>
+
+      <div class="settings-footer">
+        <button class="btn btn-secondary" id="reset-settings">Сбросить</button>
+        <button class="btn" id="save-settings">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+<div class="chat-header">
+  <div class="peer">
+    <button id="menu-btn" class="icon-btn">☰</button> <!-- гамбургер -->
+    <img class="avatar" id="peer-avatar" src="" alt="">
+    <div>
+      <div class="peer-name" id="peer-name"></div>
+      <div class="tiny muted" id="peer-status"></div>
+    </div>
+  </div>
+  <div class="peer-actions">
+    <button id="call-btn" class="icon-btn">📞</button>
+    <button id="video-btn" class="icon-btn">🎥</button>
+  </div>
+</div>
+
+
+  <!-- Login/Register modal -->
+  <div id="auth" class="auth">
+    <div class="auth-card">
+      <div class="tabs">
+        <button data-tab="login" class="tab active">Вход</button>
+        <button data-tab="register" class="tab">Регистрация</button>
+      </div>
+      <div id="pane-login" class="pane show">
+        <input id="l-username" placeholder="Username" autocomplete="username">
+        <input id="l-password" placeholder="Пароль" type="password" autocomplete="current-password">
+        <button id="do-login" class="btn wide">Войти</button>
+      </div>
+      <div id="pane-register" class="pane">
+        <input id="r-username" placeholder="Username (латиница)">
+        <input id="r-password" placeholder="Пароль" type="password">
+        <div class="muted tiny">минимум 8 символов, заглавная, строчная и цифра</div>
+        <button id="do-register" class="btn wide">Зарегистрироваться</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.GIPHY_KEY = "V74kqdBbCYAUY5wVIWCpIVVuLa28jzj6";
+  </script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

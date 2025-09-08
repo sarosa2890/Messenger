@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Вход / Регистрация</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body.auth-page {
+      display:flex; justify-content:center; align-items:center;
+      height:100vh; margin:0;
+      background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+      font-family:sans-serif;
+    }
+    .auth-card {
+      background:#fff; padding:25px; border-radius:16px;
+      box-shadow:0 6px 25px rgba(0,0,0,0.2);
+      width:360px; text-align:center;
+      transition:all .4s ease;
+    }
+    .tabs { display:flex; margin-bottom:15px; }
+    .tabs button {
+      flex:1; padding:10px; border:none; cursor:pointer;
+      background:#eee; border-radius:8px 8px 0 0; font-weight:600;
+      transition:background .3s;
+    }
+    .tabs button.active { background:#4cafef; color:#fff; }
+    .auth-form { display:none; animation:fadeIn .4s ease; }
+    .auth-form.active { display:block; }
+    .field { margin:10px 0; }
+    input { width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; }
+    button.action {
+      margin-top:10px; padding:10px 20px; border:none; border-radius:8px;
+      background:#4cafef; color:#fff; cursor:pointer; font-weight:600;
+    }
+    button.action:hover { background:#349ad1; }
+    .step { display:none; animation:fadeIn .4s ease; }
+    .step.active { display:block; }
+    .preview img,.preview video{max-width:100px;border-radius:50%;margin-top:10px;}
+    @keyframes fadeIn { from{opacity:0;transform:translateY(15px);} to{opacity:1;transform:translateY(0);} }
+  </style>
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+
+    <!-- Вкладки -->
+    <div class="tabs" id="tabs">
+      <button id="tab-login" class="active" onclick="showLogin()">Вход</button>
+      <button id="tab-register" onclick="showRegister()">Регистрация</button>
+    </div>
+
+    <!-- Форма входа -->
+    <div id="login-form" class="auth-form active">
+      <div class="field"><input id="login-username" placeholder="Username" type="text"></div>
+      <div class="field"><input id="login-password" placeholder="Пароль" type="password"></div>
+      <button class="action" onclick="loginUser()">Войти</button>
+    </div>
+
+    <!-- Форма регистрации -->
+    <div id="register-form" class="auth-form">
+      <div class="field"><input id="reg-username" placeholder="Username (латиница)" type="text"></div>
+      <div class="field"><input id="reg-password" placeholder="Пароль" type="password"></div>
+      <div class="field"><input id="reg-password2" placeholder="Подтвердите пароль" type="password"></div>
+      <div class="field muted">Пароль: минимум 8 символов, заглавная, строчная и цифра.</div>
+      <button class="action" onclick="registerUser()">Зарегистрироваться</button>
+    </div>
+
+    <!-- Шаг 2: Аватар -->
+    <div id="step-avatar" class="step">
+      <h3>Выберите аватар</h3>
+      <input type="file" id="avatar-file" accept="image/*,video/*">
+      <div class="preview" id="avatar-preview"></div>
+      <button class="action" onclick="goStep('step-name')">Продолжить</button>
+    </div>
+
+    <!-- Шаг 3: Имя и фамилия -->
+    <div id="step-name" class="step">
+      <h3>Ваши данные</h3>
+      <div class="field"><input id="first-name" placeholder="Имя" type="text"></div>
+      <div class="field"><input id="last-name" placeholder="Фамилия (опционально)" type="text"></div>
+      <button class="action" onclick="saveProfile()">Завершить</button>
+    </div>
+
+  </div>
+
+<script>
+let token=null, username=null, avatarData=null;
+
+function showLogin(){
+  document.getElementById('login-form').classList.add('active');
+  document.getElementById('register-form').classList.remove('active');
+  document.getElementById('tab-login').classList.add('active');
+  document.getElementById('tab-register').classList.remove('active');
+}
+function showRegister(){
+  document.getElementById('login-form').classList.remove('active');
+  document.getElementById('register-form').classList.add('active');
+  document.getElementById('tab-login').classList.remove('active');
+  document.getElementById('tab-register').classList.add('active');
+}
+
+// показать шаг
+function goStep(step){
+  document.getElementById('tabs').style.display='none';
+  document.querySelectorAll('.auth-form').forEach(f=>f.style.display='none');
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  document.getElementById(step).classList.add('active');
+}
+
+// регистрация
+async function registerUser(){
+  const u=document.getElementById('reg-username').value.trim();
+  const p=document.getElementById('reg-password').value;
+  const p2=document.getElementById('reg-password2').value;
+  if(p!==p2){ alert('Пароли не совпадают'); return }
+  let res=await fetch('/register',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,password:p})
+  });
+  let data=await res.json();
+  if(res.ok){
+    token=data.token; username=u;
+    goStep('step-avatar');
+  } else alert(data.error||'Ошибка регистрации');
+}
+
+// вход
+async function loginUser(){
+  const u=document.getElementById('login-username').value.trim();
+  const p=document.getElementById('login-password').value;
+  let res=await fetch('/login',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,password:p})
+  });
+  let data=await res.json();
+  if(res.ok){
+    localStorage.setItem('token',data.token);
+    localStorage.setItem('username',u);
+    location.href='/static/index.html';
+  } else alert(data.error||'Ошибка входа');
+}
+
+// аватар превью
+document.getElementById('avatar-file').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    avatarData=reader.result;
+    const prev=document.getElementById('avatar-preview');
+    prev.innerHTML='';
+    if(file.type.startsWith('image/')){
+      const img=document.createElement('img'); img.src=reader.result; prev.appendChild(img);
+    } else if(file.type.startsWith('video/')){
+      const vid=document.createElement('video'); vid.src=reader.result; vid.controls=true; vid.width=120; prev.appendChild(vid);
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+// имя/фамилия
+async function saveProfile(){
+  const fn=document.getElementById('first-name').value.trim();
+  const ln=document.getElementById('last-name').value.trim();
+  let res=await fetch('/profile',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({first_name:fn,last_name:ln,avatar:avatarData})
+  });
+  if(res.ok){
+    localStorage.setItem('token',token);
+    localStorage.setItem('username',username);
+    location.href='/static/index.html';
+  } else alert('Ошибка сохранения профиля');
+}
+</script>
+</body>
+</html>
